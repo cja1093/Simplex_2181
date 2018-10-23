@@ -10,6 +10,9 @@ void Application::InitVariables(void)
 
 	//Load a model
 	m_pModel->Load("Minecraft\\Steve.obj");
+
+	m_pMesh = new MyMesh();
+	m_pMesh->GenerateCube(1.0f, C_BLUE);
 }
 void Application::Update(void)
 {
@@ -31,7 +34,7 @@ void Application::Update(void)
 	if (false)
 	{
 		quaternion q1;
-		quaternion q2 = glm::angleAxis(glm::radians(359.9f), vector3(0.0f, 0.0f, 1.0f));
+		quaternion q2 = glm::angleAxis(glm::radians(359.90f), vector3(0.0f, 0.0f, 1.0f));
 		float fPercentage = MapValue(fTimer, 0.0f, 5.0f, 0.0f, 1.0f);
 		quaternion qSLERP = glm::mix(q1, q2, fPercentage);
 		m_m4Steve = glm::toMat4(qSLERP);
@@ -59,13 +62,57 @@ void Application::Update(void)
 	m_pModel->SetModelMatrix(m_m4Steve);
 
 	//Send the model to render list
-	m_pModel->AddToRenderList();
+	//m_pModel->AddToRenderList();
+
+
 }
 void Application::Display(void)
 {
 	// Clear the screen
 	ClearScreen();
+
+	static DWORD StartTime = GetTickCount();
+	DWORD CurrentTime = GetTickCount();
+	float fTimer = static_cast<float>(CurrentTime - StartTime) / 1000.0f;
+	float fPercentage = MapValue(fTimer, 0.0f, 2.0f, 0.0f, 1.0f);
+
+	std::cout << fPercentage << std::endl;
+
+	matrix4 m4View = m_pCameraMngr->GetViewMatrix();
+	matrix4 m4Projection = m_pCameraMngr->GetProjectionMatrix();
+	//m4Projection = glm::ortho(15.0f, 0.0f, 15.0f, 0.0f, 0.01f, 20.0f);
+
+	float fFOV = 45.0;
+	float fApsect = m_pSystem->GetWindowRatio();
+	float fNear = 0.01f;
+	float fFar = 20.0f;
+
+	m4Projection = glm::perspective(fFOV, fApsect, fNear, fFar);
+
+	vector3 v3Pos(0.0f, 0.0f, 10.0f);
+	vector3 v3Tar;
+	vector3 v3Up(0.0f, 1.0f, 0.0f);
 	
+	static vector3 v3Start(0.0f, 0.0f, 0.0f);
+	static vector3 v3End(5.0f, 0.0f, 0.0f);
+
+	if (fPercentage >= 1.0f) {
+		std::swap(v3Start, v3End);
+		CurrentTime = StartTime;
+
+		std::cout << "Swap" << std::endl;
+	}
+
+	//m_v3Orientation = vector3(5.0f, 0.0f, 0.0f);
+	//v3Tar = m_v3Orientation;
+	//m4View = glm::lookAt(v3Pos, v3Tar, v3Up);
+
+	vector3 v3Trans = glm::lerp(v3Start, v3End, fPercentage);
+	for (int i = 0; i < 5; i++) {
+		matrix4 m4Model = glm::translate(vector3(i, 0.0f, 0.0f) + v3Trans);
+		m_pMesh->Render(m4Projection, m4View, m4Model);
+	}
+
 	// draw a skybox
 	m_pMeshMngr->AddSkyboxToRenderList();
 
@@ -85,6 +132,10 @@ void Application::Release(void)
 {
 	//release model
 	SafeDelete(m_pModel);
+
+	if (m_pMesh) {
+		delete m_pMesh;
+	}
 
 	//release GUI
 	ShutdownGUI();
